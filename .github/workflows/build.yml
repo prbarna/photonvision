@@ -23,6 +23,7 @@ jobs:
       - uses: dorny/paths-filter@v3
         id: filter
         with:
+          base: add-branch-filter
           filters: |
             src:
               - '!website/**'
