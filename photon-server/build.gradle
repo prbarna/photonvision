@@ -38,6 +38,9 @@ shadowJar {
 
 node {
     nodeProjectDir = file("${projectDir}/../photon-client")
+    // pnpm 11 ignores package.json#pnpm and fails Win64 fat JAR on unapproved
+    // dependency build scripts. Match the version used in GitHub Actions.
+    pnpmVersion = "10.34.5"
 }
 
 tasks.register('copyClientUIToResources', Copy) {
