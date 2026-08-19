@@ -288,4 +288,151 @@ public class VisionEstimation {
             return Optional.of(pnpresult);
         }
     }
+
+    /** Per-camera inputs for {@link #estimateRobotPoseMultiCameraConstrainedSolvepnp}. */
+    public record ConstrainedCameraObservations(
+            Matrix<N3, N3> cameraMatrix,
+            Matrix<N8, N1> distCoeffs,
+            List<PhotonTrackedTarget> visTags,
+            Transform3d robot2camera) {}
+
+    /**
+     * Joint constrained solvePNP over multiple cameras sharing a planar robot pose [x, y, theta].
+     *
+     * @return field-to-robot as a 2d transform embedded in {@link PnpResult#best}
+     */
+    public static Optional<PnpResult> estimateRobotPoseMultiCameraConstrainedSolvepnp(
+            List<ConstrainedCameraObservations> cameras,
+            Pose3d robotPoseSeed,
+            AprilTagFieldLayout tagLayout,
+            TargetModel tagModel) {
+        if (cameras == null || cameras.isEmpty() || tagLayout == null || tagModel == null) {
+            return Optional.empty();
+        }
+        OpenCvLoader.forceStaticLoad();
+
+        var nTagsPerCamera = new int[cameras.size()];
+        var cameraCals = new double[cameras.size() * 4];
+        var robot2cameras = new double[cameras.size() * 16];
+        var fieldConcat = new ArrayList<Double>();
+        var obsConcat = new ArrayList<Double>();
+        int usedCameras = 0;
+
+        var robot2cameraBase =
+                MatBuilder.fill(Nat.N4(), Nat.N4(), 0, 0, 1, 0, -1, 0, 0, 0, 0, -1, 0, 0, 0, 0, 0, 1);
+
+        for (var cam : cameras) {
+            if (cam.cameraMatrix() == null
+                    || cam.distCoeffs() == null
+                    || cam.visTags() == null
+                    || cam.visTags().isEmpty()) {
+                continue;
+            }
+
+            var corners = new ArrayList<TargetCorner>();
+            var knownTags = new ArrayList<AprilTag>();
+            for (var tgt : cam.visTags()) {
+                int id = tgt.getFiducialId();
+                tagLayout
+                        .getTagPose(id)
+                        .ifPresent(
+                                pose -> {
+                                    knownTags.add(new AprilTag(id, pose));
+                                    corners.addAll(tgt.getDetectedCorners());
+                                });
+            }
+            if (knownTags.isEmpty() || corners.size() % 4 != 0) {
+                continue;
+            }
+            List<AprilTag> usedTags = knownTags;
+            List<TargetCorner> usedCorners = corners;
+            if (knownTags.size() > 10) {
+                System.err.println(
+                        "estimateRobotPoseMultiCameraConstrainedSolvepnp: camera has "
+                                + knownTags.size()
+                                + " tags; using first 10");
+                usedTags = new ArrayList<>(knownTags.subList(0, 10));
+                usedCorners = new ArrayList<>(corners.subList(0, 40));
+            }
+
+            Point[] points = OpenCVHelp.cornersToPoints(usedCorners);
+            {
+                MatOfPoint2f temp = new MatOfPoint2f();
+                MatOfDouble cameraMatrixMat = new MatOfDouble();
+                MatOfDouble distCoeffsMat = new MatOfDouble();
+                OpenCVHelp.matrixToMat(cam.cameraMatrix().getStorage()).assignTo(cameraMatrixMat);
+                OpenCVHelp.matrixToMat(cam.distCoeffs().getStorage()).assignTo(distCoeffsMat);
+                temp.fromArray(points);
+                Calib3d.undistortImagePoints(temp, temp, cameraMatrixMat, distCoeffsMat);
+                points = temp.toArray();
+                temp.release();
+                cameraMatrixMat.release();
+                distCoeffsMat.release();
+            }
+
+            var objectTrls = new ArrayList<Translation3d>();
+            for (var tag : usedTags) {
+                objectTrls.addAll(tagModel.getFieldVertices(tag.pose));
+            }
+            var field2points = new SimpleMatrix(4, points.length);
+            for (int i = 0; i < objectTrls.size(); i++) {
+                field2points.set(0, i, objectTrls.get(i).getX());
+                field2points.set(1, i, objectTrls.get(i).getY());
+                field2points.set(2, i, objectTrls.get(i).getZ());
+                field2points.set(3, i, 1);
+            }
+            var point_observations = new SimpleMatrix(2, points.length);
+            for (int i = 0; i < points.length; i++) {
+                point_observations.set(0, i, points[i].x);
+                point_observations.set(1, i, points[i].y);
+            }
+
+            nTagsPerCamera[usedCameras] = usedTags.size();
+            cameraCals[usedCameras * 4] = cam.cameraMatrix().get(0, 0);
+            cameraCals[usedCameras * 4 + 1] = cam.cameraMatrix().get(1, 1);
+            cameraCals[usedCameras * 4 + 2] = cam.cameraMatrix().get(0, 2);
+            cameraCals[usedCameras * 4 + 3] = cam.cameraMatrix().get(1, 2);
+
+            var robotToCamera = cam.robot2camera().toMatrix().times(robot2cameraBase);
+            System.arraycopy(robotToCamera.getData(), 0, robot2cameras, usedCameras * 16, 16);
+
+            for (double v : field2points.getDDRM().getData()) {
+                fieldConcat.add(v);
+            }
+            for (double v : point_observations.getDDRM().getData()) {
+                obsConcat.add(v);
+            }
+            usedCameras++;
+        }
+
+        if (usedCameras == 0) {
+            return Optional.empty();
+        }
+
+        var nTagsTrimmed = java.util.Arrays.copyOf(nTagsPerCamera, usedCameras);
+        var calsTrimmed = java.util.Arrays.copyOf(cameraCals, usedCameras * 4);
+        var r2cTrimmed = java.util.Arrays.copyOf(robot2cameras, usedCameras * 16);
+        var fieldArr = fieldConcat.stream().mapToDouble(Double::doubleValue).toArray();
+        var obsArr = obsConcat.stream().mapToDouble(Double::doubleValue).toArray();
+
+        var guess2 = robotPoseSeed.toPose2d();
+        var ret =
+                ConstrainedSolvepnpJni.do_optimization_multi(
+                        true,
+                        nTagsTrimmed,
+                        calsTrimmed,
+                        r2cTrimmed,
+                        new double[] {guess2.getX(), guess2.getY(), guess2.getRotation().getRadians()},
+                        fieldArr,
+                        obsArr,
+                        0,
+                        0);
+
+        if (ret == null) {
+            return Optional.empty();
+        }
+        var pnpresult = new PnpResult();
+        pnpresult.best = new Transform3d(new Transform2d(ret[0], ret[1], new Rotation2d(ret[2])));
+        return Optional.of(pnpresult);
+    }
 }

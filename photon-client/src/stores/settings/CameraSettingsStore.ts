@@ -147,7 +147,9 @@ export const useCameraSettingsStore = defineStore("cameraSettings", {
           fpsLimit: d.fpsLimit,
           isConnected: d.isConnected,
           hasConnected: d.hasConnected,
-          mismatch: d.mismatch
+          mismatch: d.mismatch,
+          robotToCamera: d.robotToCamera || { x: 0, y: 0, z: 0, roll: 0, pitch: 0, yaw: 0 },
+          includeInFusion: d.includeInFusion !== false
         };
         return acc;
       }, {});
@@ -176,7 +178,9 @@ export const useCameraSettingsStore = defineStore("cameraSettings", {
       const payload = {
         fov: data.fov,
         quirksToChange: data.quirksToChange,
-        cameraUniqueName: cameraUniqueName
+        cameraUniqueName: cameraUniqueName,
+        robotToCamera: data.robotToCamera,
+        includeInFusion: data.includeInFusion
       };
       return axios.post("/settings/camera", payload);
     },

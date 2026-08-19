@@ -37,9 +37,11 @@ import org.opencv.core.MatOfInt;
 import org.opencv.core.Size;
 import org.opencv.imgcodecs.Imgcodecs;
 import org.photonvision.common.configuration.ConfigManager;
+import org.photonvision.common.configuration.MultiCameraFusionConfig;
 import org.photonvision.common.configuration.NetworkConfig;
 import org.photonvision.common.configuration.NeuralNetworkModelManager;
 import org.photonvision.common.configuration.NeuralNetworkModelsSettings.ModelProperties;
+import org.photonvision.common.configuration.RobotToCameraTransform;
 import org.photonvision.common.dataflow.DataChangeDestination;
 import org.photonvision.common.dataflow.DataChangeService;
 import org.photonvision.common.dataflow.events.IncomingWebSocketEvent;
@@ -394,8 +396,28 @@ public class RequestHandler {
         NetworkTablesManager.getInstance().setConfig(config);
     }
 
+    public static void onFusionSettingsRequest(Context ctx) {
+        try {
+            MultiCameraFusionConfig fusion =
+                    kObjectMapper.readValue(ctx.bodyInputStream(), MultiCameraFusionConfig.class);
+            ConfigManager.getInstance().setFusionConfig(fusion);
+            ConfigManager.getInstance().requestSave();
+            ctx.status(200);
+            ctx.result("Successfully saved fusion settings");
+            logger.info("Successfully saved fusion settings");
+        } catch (IOException e) {
+            ctx.status(400);
+            ctx.result("The provided fusion settings were malformed");
+            logger.error("The provided fusion settings were malformed", e);
+        }
+    }
+
     private record CameraSettingsRequest(
-            double fov, HashMap<CameraQuirk, Boolean> quirksToChange, String cameraUniqueName) {}
+            double fov,
+            HashMap<CameraQuirk, Boolean> quirksToChange,
+            String cameraUniqueName,
+            RobotToCameraTransform robotToCamera,
+            Boolean includeInFusion) {}
 
     public static void onCameraSettingsRequest(Context ctx) {
         try {
@@ -420,6 +442,12 @@ public class RequestHandler {
 
             module.setFov(fov);
             module.changeCameraQuirks(quirksToChange);
+            if (request.robotToCamera != null) {
+                module.setRobotToCamera(request.robotToCamera);
+            }
+            if (request.includeInFusion != null) {
+                module.setIncludeInFusion(request.includeInFusion);
+            }
             module.saveModule();
 
             ctx.status(200).result("Camera settings updated successfully");

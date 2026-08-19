@@ -10,11 +10,16 @@ import { type CameraSettingsChangeRequest, ValidQuirks } from "@/types/SettingTy
 import { useTheme } from "vuetify";
 import { axiosPost } from "@/lib/PhotonUtils";
 
+const RAD2DEG = 180 / Math.PI;
+const DEG2RAD = Math.PI / 180;
+
 const theme = useTheme();
 
 const tempSettingsStruct = ref<CameraSettingsChangeRequest>({
   fov: useCameraSettingsStore().currentCameraSettings.fov.value,
-  quirksToChange: Object.assign({}, useCameraSettingsStore().currentCameraSettings.cameraQuirks.quirks)
+  quirksToChange: Object.assign({}, useCameraSettingsStore().currentCameraSettings.cameraQuirks.quirks),
+  robotToCamera: { x: 0, y: 0, z: 0, roll: 0, pitch: 0, yaw: 0 },
+  includeInFusion: true
 });
 const focusMode = computed<boolean>({
   get: () => useCameraSettingsStore().isFocusMode,
@@ -69,7 +74,27 @@ const settingsHaveChanged = (): boolean => {
     if (a.quirksToChange[q] != b.cameraQuirks.quirks[q]) return true;
   }
 
-  return a.fov != b.fov.value;
+  return a.fov != b.fov.value || a.includeInFusion != b.includeInFusion || robotToCameraChanged();
+};
+
+const robotToCameraChanged = (): boolean => {
+  const a = tempSettingsStruct.value.robotToCamera;
+  const b = useCameraSettingsStore().currentCameraSettings.robotToCamera || {
+    x: 0,
+    y: 0,
+    z: 0,
+    roll: 0,
+    pitch: 0,
+    yaw: 0
+  };
+  return (
+    a.x !== b.x ||
+    a.y !== b.y ||
+    a.z !== b.z ||
+    Math.abs(a.roll - b.roll * RAD2DEG) > 1e-6 ||
+    Math.abs(a.pitch - b.pitch * RAD2DEG) > 1e-6 ||
+    Math.abs(a.yaw - b.yaw * RAD2DEG) > 1e-6
+  );
 };
 
 const resetTempSettingsStruct = () => {
@@ -78,11 +103,42 @@ const resetTempSettingsStruct = () => {
     {},
     useCameraSettingsStore().currentCameraSettings.cameraQuirks.quirks
   );
+  const rtc = useCameraSettingsStore().currentCameraSettings.robotToCamera || {
+    x: 0,
+    y: 0,
+    z: 0,
+    roll: 0,
+    pitch: 0,
+    yaw: 0
+  };
+  tempSettingsStruct.value.robotToCamera = {
+    x: rtc.x,
+    y: rtc.y,
+    z: rtc.z,
+    roll: rtc.roll * RAD2DEG,
+    pitch: rtc.pitch * RAD2DEG,
+    yaw: rtc.yaw * RAD2DEG
+  };
+  tempSettingsStruct.value.includeInFusion =
+    useCameraSettingsStore().currentCameraSettings.includeInFusion !== false;
 };
 
 const saveCameraSettings = () => {
+  const payload: CameraSettingsChangeRequest = {
+    fov: tempSettingsStruct.value.fov,
+    quirksToChange: tempSettingsStruct.value.quirksToChange,
+    includeInFusion: tempSettingsStruct.value.includeInFusion,
+    robotToCamera: {
+      x: tempSettingsStruct.value.robotToCamera.x,
+      y: tempSettingsStruct.value.robotToCamera.y,
+      z: tempSettingsStruct.value.robotToCamera.z,
+      roll: tempSettingsStruct.value.robotToCamera.roll * DEG2RAD,
+      pitch: tempSettingsStruct.value.robotToCamera.pitch * DEG2RAD,
+      yaw: tempSettingsStruct.value.robotToCamera.yaw * DEG2RAD
+    }
+  };
   useCameraSettingsStore()
-    .updateCameraSettings(tempSettingsStruct.value)
+    .updateCameraSettings(payload)
     .then((response) => {
       useStateStore().showSnackbarMessage({ color: "success", message: response.data.text || response.data });
 
@@ -92,6 +148,8 @@ const saveCameraSettings = () => {
         {},
         tempSettingsStruct.value.quirksToChange
       );
+      useCameraSettingsStore().currentCameraSettings.robotToCamera = payload.robotToCamera;
+      useCameraSettingsStore().currentCameraSettings.includeInFusion = payload.includeInFusion;
     })
     .catch((error) => {
       resetTempSettingsStruct();
@@ -170,6 +228,33 @@ const wrappedCameras = computed<SelectItem[]>(() =>
         v-model="focusMode"
         tooltip="Enable Focus Mode to start focusing the lens on your camera"
         label="Focus Mode"
+      ></pv-switch>
+      <div class="text-subtitle-2 pt-4">Robot-to-camera (fusion)</div>
+      <pv-number-input v-model="tempSettingsStruct.robotToCamera.x" label="X (m)" :step="0.001" :label-cols="4" />
+      <pv-number-input v-model="tempSettingsStruct.robotToCamera.y" label="Y (m)" :step="0.001" :label-cols="4" />
+      <pv-number-input v-model="tempSettingsStruct.robotToCamera.z" label="Z (m)" :step="0.001" :label-cols="4" />
+      <pv-number-input
+        v-model="tempSettingsStruct.robotToCamera.roll"
+        label="Roll (deg)"
+        :step="0.1"
+        :label-cols="4"
+      />
+      <pv-number-input
+        v-model="tempSettingsStruct.robotToCamera.pitch"
+        label="Pitch (deg)"
+        :step="0.1"
+        :label-cols="4"
+      />
+      <pv-number-input
+        v-model="tempSettingsStruct.robotToCamera.yaw"
+        label="Yaw (deg)"
+        :step="0.1"
+        :label-cols="4"
+      />
+      <pv-switch
+        v-model="tempSettingsStruct.includeInFusion"
+        tooltip="Include this camera in multi-camera pose comparison streams"
+        label="Include in pose fusion"
       ></pv-switch>
     </v-card-text>
     <v-card-text class="d-flex pt-0">

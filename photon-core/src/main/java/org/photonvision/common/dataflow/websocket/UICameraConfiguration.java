@@ -20,6 +20,7 @@ package org.photonvision.common.dataflow.websocket;
 import java.util.HashMap;
 import java.util.List;
 import org.photonvision.common.configuration.CameraConfiguration;
+import org.photonvision.common.configuration.RobotToCameraTransform;
 import org.photonvision.vision.calibration.UICameraCalibrationCoefficients;
 import org.photonvision.vision.camera.PVCameraInfo;
 import org.photonvision.vision.camera.QuirkyCamera;
@@ -55,6 +56,9 @@ public class UICameraConfiguration {
     public boolean mismatch;
 
     public int fpsLimit;
+
+    public RobotToCameraTransform robotToCamera;
+    public boolean includeInFusion = true;
 
     // Status for if the underlying device is present and such
     public boolean isConnected;

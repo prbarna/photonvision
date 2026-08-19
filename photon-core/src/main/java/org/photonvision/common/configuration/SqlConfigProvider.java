@@ -58,6 +58,7 @@ public class SqlConfigProvider extends ConfigProvider {
         static final String HARDWARE_SETTINGS = "hardwareSettings";
         static final String ATFL_CONFIG_FILE = "apriltagFieldLayout";
         static final String NEURAL_NETWORK_PROPERTIES = "neuralNetworkProperties";
+        static final String FUSION_CONFIG = "fusionConfig";
     }
 
     private static final String dbName = "photon.sqlite";
@@ -319,6 +320,12 @@ public class SqlConfigProvider extends ConfigProvider {
                     loadConfigOrDefault(
                             conn, GlobalKeys.ATFL_CONFIG_FILE, AprilTagFieldLayout.class, this::atflDefault);
             var cams = loadCameraConfigs(conn);
+            var fusionConfig =
+                    loadConfigOrDefault(
+                            conn,
+                            GlobalKeys.FUSION_CONFIG,
+                            MultiCameraFusionConfig.class,
+                            MultiCameraFusionConfig::new);
 
             try {
                 conn.close();
@@ -329,6 +336,7 @@ public class SqlConfigProvider extends ConfigProvider {
             this.config =
                     new PhotonConfiguration(
                             hardwareConfig, hardwareSettings, networkConfig, atfl, nnProps, cams);
+            this.config.setFusionConfig(fusionConfig);
         }
     }
 
@@ -499,6 +507,16 @@ public class SqlConfigProvider extends ConfigProvider {
                         statement3,
                         GlobalKeys.NEURAL_NETWORK_PROPERTIES,
                         JacksonUtils.serializeToString(config.neuralNetworkPropertyManager()));
+                statement3.executeUpdate();
+                statement3.close();
+            }
+
+            {
+                statement3 = conn.prepareStatement(sqlString);
+                addFile(
+                        statement3,
+                        GlobalKeys.FUSION_CONFIG,
+                        JacksonUtils.serializeToString(config.getFusionConfig()));
                 statement3.executeUpdate();
                 statement3.close();
             }

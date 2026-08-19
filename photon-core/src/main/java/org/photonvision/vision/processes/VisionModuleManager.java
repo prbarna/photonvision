@@ -20,6 +20,7 @@ package org.photonvision.vision.processes;
 import java.util.*;
 import org.photonvision.common.logging.LogGroup;
 import org.photonvision.common.logging.Logger;
+import org.photonvision.vision.fusion.MultiCameraPoseOrchestrator;
 
 /** VisionModuleManager has many VisionModules, and provides camera configuration data to them. */
 public class VisionModuleManager {
@@ -46,12 +47,15 @@ public class VisionModuleManager {
         var pipelineManager = new PipelineManager(visionSource.getCameraConfiguration());
         var module = new VisionModule(pipelineManager, visionSource);
         visionModules.add(module);
+        MultiCameraPoseOrchestrator.getInstance().register(module);
 
         return module;
     }
 
     public synchronized void removeModule(VisionModule module) {
         visionModules.remove(module);
+        MultiCameraPoseOrchestrator.getInstance()
+                .unregister(module.getStateAsCameraConfig().uniqueName);
         module.stop();
         module.saveAndBroadcastAll();
     }

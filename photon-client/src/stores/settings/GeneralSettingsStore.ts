@@ -4,6 +4,7 @@ import type {
   GeneralSettings,
   LightingSettings,
   MetricData,
+  MultiCameraFusionConfig,
   NetworkSettings
 } from "@/types/SettingTypes";
 import { NetworkConnectionType } from "@/types/SettingTypes";
@@ -18,6 +19,7 @@ interface GeneralSettingsStore {
   lighting: LightingSettings;
   metrics: MetricData;
   currentFieldLayout;
+  fusion: MultiCameraFusionConfig;
 }
 
 interface MetricsEntry {
@@ -120,6 +122,15 @@ export const useSettingsStore = defineStore("settings", {
         width: 8.2296
       },
       tags: []
+    },
+    fusion: {
+      enabled: false,
+      maxDtMs: 50,
+      minCameras: 1,
+      baseline: true,
+      weightedAverage: true,
+      jointPnp: true,
+      writeCsv: true
     }
   }),
   getters: {
@@ -167,9 +178,15 @@ export const useSettingsStore = defineStore("settings", {
       this.lighting = data.lighting;
       this.network = data.networkSettings;
       this.currentFieldLayout = data.atfl;
+      if (data.fusion) {
+        this.fusion = data.fusion;
+      }
     },
     updateGeneralSettings(payload: Required<ConfigurableNetworkSettings>) {
       return axios.post("/settings/general", payload);
+    },
+    updateFusionSettings(payload: MultiCameraFusionConfig) {
+      return axios.post("/settings/fusion", payload);
     },
     /**
      * Modify the brightness of the LEDs.

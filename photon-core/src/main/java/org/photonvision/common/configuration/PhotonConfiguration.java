@@ -30,6 +30,7 @@ public class PhotonConfiguration {
     private AprilTagFieldLayout atfl;
     private NeuralNetworkModelsSettings neuralNetworkProperties;
     private HashMap<String, CameraConfiguration> cameraConfigurations;
+    private MultiCameraFusionConfig fusionConfig = new MultiCameraFusionConfig();
 
     public PhotonConfiguration(
             HardwareConfig hardwareConfig,
@@ -59,6 +60,7 @@ public class PhotonConfiguration {
         this.neuralNetworkProperties = neuralNetworkProperties;
         this.cameraConfigurations = cameraConfigurations;
         this.atfl = atfl;
+        this.fusionConfig = new MultiCameraFusionConfig();
     }
 
     public PhotonConfiguration() {
@@ -96,6 +98,14 @@ public class PhotonConfiguration {
 
     public void setNetworkConfig(NetworkConfig networkConfig) {
         this.networkConfig = networkConfig;
+    }
+
+    public MultiCameraFusionConfig getFusionConfig() {
+        return fusionConfig != null ? fusionConfig : new MultiCameraFusionConfig();
+    }
+
+    public void setFusionConfig(MultiCameraFusionConfig fusionConfig) {
+        this.fusionConfig = fusionConfig != null ? fusionConfig : new MultiCameraFusionConfig();
     }
 
     public void setNeuralNetworkProperties(NeuralNetworkModelsSettings neuralNetworkProperties) {

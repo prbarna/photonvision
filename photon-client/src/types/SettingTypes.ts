@@ -279,11 +279,51 @@ export interface UiCameraConfiguration {
   isConnected: boolean;
   hasConnected: boolean;
   mismatch: boolean;
+
+  robotToCamera: RobotToCameraTransform;
+  includeInFusion: boolean;
+}
+
+export interface RobotToCameraTransform {
+  x: number;
+  y: number;
+  z: number;
+  roll: number;
+  pitch: number;
+  yaw: number;
+}
+
+export interface MultiCameraFusionConfig {
+  enabled: boolean;
+  maxDtMs: number;
+  minCameras: number;
+  baseline: boolean;
+  weightedAverage: boolean;
+  jointPnp: boolean;
+  writeCsv: boolean;
+}
+
+export interface PoseCompareEstimate {
+  method: string;
+  camera?: string;
+  x: number;
+  y: number;
+  z: number;
+  roll: number;
+  pitch: number;
+  yaw: number;
+  timestamp: number;
+  camerasUsed: string[];
+  fiducialIdsUsed: number[];
+  reprojErr: number;
+  computeMs: number;
 }
 
 export interface CameraSettingsChangeRequest {
   fov: number;
   quirksToChange: Record<ValidQuirks, boolean>;
+  robotToCamera: RobotToCameraTransform;
+  includeInFusion: boolean;
 }
 
 export const PlaceholderCameraSettings: UiCameraConfiguration = reactive({
@@ -447,7 +487,9 @@ export const PlaceholderCameraSettings: UiCameraConfiguration = reactive({
   fpsLimit: -1,
   isConnected: true,
   hasConnected: true,
-  mismatch: false
+  mismatch: false,
+  robotToCamera: { x: 0, y: 0, z: 0, roll: 0, pitch: 0, yaw: 0 },
+  includeInFusion: true
 });
 
 export enum CalibrationBoardTypes {

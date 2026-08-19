@@ -4,6 +4,7 @@ import CamerasCard from "@/components/dashboard/CamerasCard.vue";
 import CameraAndPipelineSelectCard from "@/components/dashboard/CameraAndPipelineSelectCard.vue";
 import StreamConfigCard from "@/components/dashboard/StreamConfigCard.vue";
 import PipelineConfigCard from "@/components/dashboard/ConfigOptions.vue";
+import PoseCompareCard from "@/components/dashboard/PoseCompareCard.vue";
 import { useCameraSettingsStore } from "@/stores/settings/CameraSettingsStore";
 import { useStateStore } from "@/stores/StateStore";
 import { useSettingsStore } from "@/stores/settings/GeneralSettingsStore";
@@ -160,6 +161,7 @@ const showCameraSetupDialog = ref(useCameraSettingsStore().needsCameraConfigurat
         <StreamConfigCard v-model="cameraViewType" />
       </v-col>
     </v-row>
+    <PoseCompareCard />
     <PipelineConfigCard />
 
     <!-- TODO - not sure this belongs here -->

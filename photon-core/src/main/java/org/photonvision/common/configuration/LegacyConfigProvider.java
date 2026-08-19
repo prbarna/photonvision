@@ -49,6 +49,7 @@ class LegacyConfigProvider extends ConfigProvider {
     public static final String HW_SET_FNAME = "hardwareSettings.json";
     public static final String NET_SET_FNAME = "networkSettings.json";
     public static final String ATFL_SET_FNAME = "apriltagFieldLayout.json";
+    public static final String FUSION_CFG_FNAME = "fusionConfig.json";
 
     private PhotonConfiguration config;
     private final File hardwareConfigFile;
@@ -56,6 +57,7 @@ class LegacyConfigProvider extends ConfigProvider {
     private final File networkConfigFile;
     private final File camerasFolder;
     private final File apriltagFieldLayoutFile;
+    private final File fusionConfigFile;
 
     final File configDirectoryFile;
 
@@ -93,6 +95,8 @@ class LegacyConfigProvider extends ConfigProvider {
                 new File(Path.of(configDirectoryFile.toString(), NET_SET_FNAME).toUri());
         this.apriltagFieldLayoutFile =
                 new File(Path.of(configDirectoryFile.toString(), ATFL_SET_FNAME).toUri());
+        this.fusionConfigFile =
+                new File(Path.of(configDirectoryFile.toString(), FUSION_CFG_FNAME).toUri());
         this.camerasFolder = new File(Path.of(configDirectoryFile.toString(), "cameras").toUri());
 
         settingsSaveThread = new Thread(this::saveAndWriteTask);
@@ -212,6 +216,19 @@ class LegacyConfigProvider extends ConfigProvider {
 
         HashMap<String, CameraConfiguration> cameraConfigurations = loadCameraConfigs();
 
+        MultiCameraFusionConfig fusionConfig = new MultiCameraFusionConfig();
+        if (fusionConfigFile.exists()) {
+            try {
+                var loaded =
+                        JacksonUtils.deserialize(fusionConfigFile.toPath(), MultiCameraFusionConfig.class);
+                if (loaded != null) {
+                    fusionConfig = loaded;
+                }
+            } catch (IOException e) {
+                logger.error("Could not deserialize fusion config! Loading defaults", e);
+            }
+        }
+
         this.config =
                 new PhotonConfiguration(
                         hardwareConfig,
@@ -220,6 +237,7 @@ class LegacyConfigProvider extends ConfigProvider {
                         atfl,
                         new NeuralNetworkModelsSettings(),
                         cameraConfigurations);
+        this.config.setFusionConfig(fusionConfig);
     }
 
     @Override
@@ -236,6 +254,11 @@ class LegacyConfigProvider extends ConfigProvider {
             JacksonUtils.serialize(hardwareSettingsFile.toPath(), config.getHardwareSettings());
         } catch (IOException e) {
             logger.error("Could not save hardware config!", e);
+        }
+        try {
+            JacksonUtils.serialize(fusionConfigFile.toPath(), config.getFusionConfig());
+        } catch (IOException e) {
+            logger.error("Could not save fusion config!", e);
         }
 
         // save all of our cameras

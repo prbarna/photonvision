@@ -19,6 +19,7 @@
 #include <span>
 #include <vector>
 
+#include <Eigen/Core>
 #include <fmt/core.h>
 #include <fmt/ranges.h>
 
@@ -88,6 +89,102 @@ Java_org_photonvision_jni_ConstrainedSolvepnpJni_do_1optimization
       constrained_solvepnp::do_optimization(
           headingFree, nTags, cameraCal_, robot2cameraMat, xGuessMat,
           field2pointsMat, pointObservationsMat, gyro_θ, gyro_error_scale_fac);
+
+  if (result) {
+    std::vector<double> resultVec{result->data(),
+                                  result->data() + result->size()};
+    return createJDoubleArray(env, resultVec);
+  } else {
+    return nullptr;
+  }
+}
+
+/*
+ * Class:     org_photonvision_jni_ConstrainedSolvepnpJni_do_1optimization
+ * Method:    1multi
+ * Signature: (Z[I[D[D[D[D[DDD)[D
+ */
+JNIEXPORT jdoubleArray JNICALL
+Java_org_photonvision_jni_ConstrainedSolvepnpJni_do_1optimization_1multi
+  (JNIEnv* env, jclass, jboolean headingFree, jintArray nTagsPerCamera,
+   jdoubleArray cameraCals, jdoubleArray robot2cameras, jdoubleArray xGuess,
+   jdoubleArray field2points, jdoubleArray pointObservations, jdouble gyro_θ,
+   jdouble gyro_error_scale_fac)
+{
+  jsize nCameras = env->GetArrayLength(nTagsPerCamera);
+  if (nCameras <= 0) {
+    return nullptr;
+  }
+
+  std::vector<int> nTags(nCameras);
+  {
+    std::vector<jint> tmp(nCameras);
+    env->GetIntArrayRegion(nTagsPerCamera, 0, nCameras, tmp.data());
+    for (jsize i = 0; i < nCameras; i++) {
+      nTags[i] = tmp[i];
+    }
+  }
+
+  auto cameraCalVec = convertJDoubleArray(env, cameraCals);
+  auto robot2cameraVec = convertJDoubleArray(env, robot2cameras);
+  auto xGuessVec = convertJDoubleArray(env, xGuess);
+  auto field2pointsVec = convertJDoubleArray(env, field2points);
+  auto pointObservationsVec = convertJDoubleArray(env, pointObservations);
+
+  if (cameraCalVec.size() < static_cast<size_t>(nCameras) * 4 ||
+      robot2cameraVec.size() < static_cast<size_t>(nCameras) * 16 ||
+      xGuessVec.size() < 3) {
+    return nullptr;
+  }
+
+  std::vector<constrained_solvepnp::CameraCalibration> cals(nCameras);
+  std::vector<Eigen::Matrix<double, 4, 4, Eigen::ColMajor>> r2c(nCameras);
+  std::vector<Eigen::Matrix<double, 4, Eigen::Dynamic, Eigen::ColMajor>> field(
+      nCameras);
+  std::vector<Eigen::Matrix<double, 2, Eigen::Dynamic, Eigen::ColMajor>> obs(
+      nCameras);
+
+  size_t fieldOffset = 0;
+  size_t obsOffset = 0;
+  for (jsize i = 0; i < nCameras; i++) {
+    int tags = nTags[i];
+    if (tags < 0) {
+      return nullptr;
+    }
+    int nPts = tags * 4;
+    if (fieldOffset + static_cast<size_t>(4 * nPts) > field2pointsVec.size() ||
+        obsOffset + static_cast<size_t>(2 * nPts) >
+            pointObservationsVec.size()) {
+      return nullptr;
+    }
+    cals[i] = constrained_solvepnp::CameraCalibration{
+        cameraCalVec[i * 4 + 0],
+        cameraCalVec[i * 4 + 1],
+        cameraCalVec[i * 4 + 2],
+        cameraCalVec[i * 4 + 3],
+    };
+    Eigen::Map<Eigen::Matrix<double, 4, 4, Eigen::RowMajor>> r2cRow(
+        robot2cameraVec.data() + i * 16);
+    r2c[i] = r2cRow;
+
+    Eigen::Map<Eigen::Matrix<double, 4, Eigen::Dynamic, Eigen::RowMajor>>
+        fieldRow(field2pointsVec.data() + fieldOffset, 4, nPts);
+    field[i] = fieldRow;
+    fieldOffset += static_cast<size_t>(4 * nPts);
+
+    Eigen::Map<Eigen::Matrix<double, 2, Eigen::Dynamic, Eigen::RowMajor>>
+        obsRow(pointObservationsVec.data() + obsOffset, 2, nPts);
+    obs[i] = obsRow;
+    obsOffset += static_cast<size_t>(2 * nPts);
+  }
+
+  Eigen::Map<Eigen::Matrix<double, 3, 1>> xGuessMat(xGuessVec.data());
+
+  wpi::expected<constrained_solvepnp::RobotStateMat, slp::ExitStatus> result =
+      constrained_solvepnp::do_optimization_multi(
+          headingFree, static_cast<int>(nCameras), nTags.data(), cals.data(),
+          r2c.data(), xGuessMat, field.data(), obs.data(), gyro_θ,
+          gyro_error_scale_fac);
 
   if (result) {
     std::vector<double> resultVec{result->data(),

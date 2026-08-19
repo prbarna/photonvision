@@ -29,6 +29,7 @@ import java.util.function.BiConsumer;
 import org.opencv.core.Size;
 import org.photonvision.common.configuration.CameraConfiguration;
 import org.photonvision.common.configuration.ConfigManager;
+import org.photonvision.common.configuration.RobotToCameraTransform;
 import org.photonvision.common.dataflow.CVPipelineResultConsumer;
 import org.photonvision.common.dataflow.DataChangeService;
 import org.photonvision.common.dataflow.DataChangeService.SubscriberHandle;
@@ -348,6 +349,15 @@ public class VisionModule {
         }
     }
 
+    public void setRobotToCamera(RobotToCameraTransform robotToCamera) {
+        visionSource.getSettables().getConfiguration().robotToCamera =
+                robotToCamera != null ? robotToCamera : new RobotToCameraTransform();
+    }
+
+    public void setIncludeInFusion(boolean includeInFusion) {
+        visionSource.getSettables().getConfiguration().includeInFusion = includeInFusion;
+    }
+
     private boolean isVendorCamera() {
         return visionSource.isVendorCamera();
     }
@@ -580,6 +590,10 @@ public class VisionModule {
         ret.mismatch = this.mismatch;
 
         ret.fpsLimit = this.fpsLimit;
+
+        ret.robotToCamera =
+                config.robotToCamera != null ? config.robotToCamera : new RobotToCameraTransform();
+        ret.includeInFusion = config.includeInFusion;
 
         // TODO refactor into helper method
         var temp = new HashMap<Integer, HashMap<String, Object>>();

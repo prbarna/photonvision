@@ -251,6 +251,11 @@ public class ConfigManager {
         requestSave();
     }
 
+    public void setFusionConfig(MultiCameraFusionConfig fusionConfig) {
+        getConfig().setFusionConfig(fusionConfig);
+        requestSave();
+    }
+
     public Path getLogsDir() {
         return Path.of(configDirectoryFile.toString(), "logs");
     }

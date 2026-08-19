@@ -50,4 +50,19 @@ wpi::expected<RobotStateMat, slp::ExitStatus> do_optimization(
         point_observations,
     double gyroθ, double gyroErrorScaleFac);
 
+/**
+ * Joint optimization over multiple cameras sharing robot state [x, y, theta].
+ * Each camera has its own calibration, robot-to-camera, and observations.
+ */
+wpi::expected<RobotStateMat, slp::ExitStatus> do_optimization_multi(
+    bool heading_free, int nCameras, const int* nTags,
+    const CameraCalibration* cameraCals,
+    const Eigen::Matrix<casadi_real, 4, 4, Eigen::ColMajor>* robot2cameras,
+    RobotStateMat x_guess,
+    const Eigen::Matrix<casadi_real, 4, Eigen::Dynamic, Eigen::ColMajor>*
+        field2points,
+    const Eigen::Matrix<casadi_real, 2, Eigen::Dynamic, Eigen::ColMajor>*
+        point_observations,
+    double gyroθ, double gyroErrorScaleFac);
+
 }  // namespace constrained_solvepnp

@@ -18,21 +18,25 @@
 package org.photonvision.common.dataflow.websocket;
 
 import edu.wpi.first.apriltag.AprilTagFieldLayout;
+import org.photonvision.common.configuration.MultiCameraFusionConfig;
 
 public class UIProgramSettings {
     public UIProgramSettings(
             UINetConfig networkSettings,
             UILightingConfig lighting,
             UIGeneralSettings general,
-            AprilTagFieldLayout atfl) {
+            AprilTagFieldLayout atfl,
+            MultiCameraFusionConfig fusion) {
         this.networkSettings = networkSettings;
         this.lighting = lighting;
         this.general = general;
         this.atfl = atfl;
+        this.fusion = fusion;
     }
 
     public UINetConfig networkSettings;
     public UILightingConfig lighting;
     public UIGeneralSettings general;
     public AprilTagFieldLayout atfl;
+    public MultiCameraFusionConfig fusion;
 }

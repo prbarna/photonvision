@@ -4,7 +4,9 @@ import type {
   LightingSettings,
   LogLevel,
   MetricData,
+  MultiCameraFusionConfig,
   NetworkSettings,
+  PoseCompareEstimate,
   PVCameraInfo,
   QuirkyCamera,
   VsmState
@@ -23,6 +25,7 @@ export interface WebsocketSettingsUpdate {
   lighting: Required<LightingSettings>;
   networkSettings: NetworkSettings;
   atfl: AprilTagFieldLayout;
+  fusion?: MultiCameraFusionConfig;
 }
 
 export interface WebsocketNumberPair {
@@ -71,6 +74,15 @@ export interface WebsocketCameraSettingsUpdate {
   isConnected: boolean;
   hasConnected: boolean;
   mismatch: boolean;
+  robotToCamera?: {
+    x: number;
+    y: number;
+    z: number;
+    roll: number;
+    pitch: number;
+    yaw: number;
+  };
+  includeInFusion?: boolean;
 }
 export interface WebsocketNTUpdate {
   connected: boolean;
@@ -108,6 +120,7 @@ export interface IncomingWebsocketData {
   cameraUniqueName?: string; // Sent when mutating pipeline settings to check against currently active
   calibrationData?: WebsocketCalibrationData;
   visionSourceManager?: VsmState;
+  updatePoseCompare?: { estimates: PoseCompareEstimate[] };
 }
 
 export enum WebsocketPipelineType {

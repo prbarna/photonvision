@@ -62,6 +62,12 @@ public class CameraConfiguration {
 
     public int streamIndex = 0; // 0 index means ports [1181, 1182], 1 means [1183, 1184], etc...
 
+    /** Transform from robot origin to this camera. Identity if unset. */
+    public RobotToCameraTransform robotToCamera = new RobotToCameraTransform();
+
+    /** When false, this camera is omitted from multi-camera pose comparison streams. */
+    public boolean includeInFusion = true;
+
     // Ignore the pipes, as we serialize them to their own column to hack around
     // polymorphic lists
     @JsonIgnore public List<CVPipelineSettings> pipelineSettings = new ArrayList<>();
@@ -88,7 +94,9 @@ public class CameraConfiguration {
             @JsonProperty("cameraQuirks") QuirkyCamera cameraQuirks,
             @JsonProperty("FOV") double FOV,
             @JsonProperty("calibrations") List<CameraCalibrationCoefficients> calibrations,
-            @JsonProperty("currentPipelineIndex") int currentPipelineIndex) {
+            @JsonProperty("currentPipelineIndex") int currentPipelineIndex,
+            @JsonProperty("robotToCamera") RobotToCameraTransform robotToCamera,
+            @JsonProperty("includeInFusion") Boolean includeInFusion) {
         this.uniqueName = uniqueName;
         this.matchedCameraInfo = matchedCameraInfo;
         this.nickname = nickname;
@@ -97,6 +105,8 @@ public class CameraConfiguration {
         this.FOV = FOV;
         this.calibrations = calibrations != null ? calibrations : new ArrayList<>();
         this.currentPipelineIndex = currentPipelineIndex;
+        this.robotToCamera = robotToCamera != null ? robotToCamera : new RobotToCameraTransform();
+        this.includeInFusion = includeInFusion == null || includeInFusion;
     }
 
     // Special case constructor for use with File sources
@@ -278,6 +288,8 @@ public class CameraConfiguration {
         ret.isCSICamera = matchedCameraInfo.type() == CameraType.ZeroCopyPicam;
         ret.pipelineNicknames = pipelineSettings.stream().map(it -> it.pipelineNickname).toList();
         ret.cameraQuirks = cameraQuirks;
+        ret.robotToCamera = robotToCamera != null ? robotToCamera : new RobotToCameraTransform();
+        ret.includeInFusion = includeInFusion;
         ret.calibrations =
                 calibrations.stream().map(CameraCalibrationCoefficients::cloneWithoutObservations).toList();
 

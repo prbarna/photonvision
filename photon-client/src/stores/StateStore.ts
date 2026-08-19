@@ -2,6 +2,7 @@ import { defineStore } from "pinia";
 import type { LogMessage, VsmState } from "@/types/SettingTypes";
 import type { AutoReconnectingWebsocket } from "@/lib/AutoReconnectingWebsocket";
 import type { MultitagResult, PipelineResult } from "@/types/PhotonTrackingTypes";
+import type { PoseCompareEstimate } from "@/types/SettingTypes";
 import { useCameraSettingsStore } from "@/stores/settings/CameraSettingsStore";
 import type {
   WebsocketCalibrationData,
@@ -53,6 +54,7 @@ interface StateStore {
   };
 
   vsmState: VsmState;
+  poseCompareEstimates: PoseCompareEstimate[];
 }
 
 export const useStateStore = defineStore("state", {
@@ -105,7 +107,8 @@ export const useStateStore = defineStore("state", {
       vsmState: {
         allConnectedCameras: [],
         disabledConfigs: []
-      }
+      },
+      poseCompareEstimates: []
     };
   },
   getters: {
@@ -168,6 +171,9 @@ export const useStateStore = defineStore("state", {
     },
     updateDiscoveredCameras(data: VsmState) {
       this.vsmState = data;
+    },
+    updatePoseCompareFromWebsocket(estimates: PoseCompareEstimate[]) {
+      this.poseCompareEstimates = estimates;
     },
     showSnackbarMessage(data: {
       message: string;

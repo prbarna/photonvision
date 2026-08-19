@@ -23,7 +23,6 @@ import edu.wpi.first.math.MatBuilder;
 import edu.wpi.first.math.Nat;
 import edu.wpi.first.util.RuntimeLoader;
 import java.io.IOException;
-import java.util.Arrays;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -96,7 +95,49 @@ public class ConstrainedSolvepnpTest {
                         point_observations.getData(),
                         0,
                         0);
-        assertNotNull(ret);
-        System.out.println(Arrays.toString(ret));
+        var retMulti =
+                ConstrainedSolvepnpJni.do_optimization_multi(
+                        true,
+                        new int[] {1},
+                        cameraCal,
+                        robot2camera.getData(),
+                        x_guess,
+                        field2points.getData(),
+                        point_observations.getData(),
+                        0,
+                        0);
+        assertNotNull(retMulti);
+        org.junit.jupiter.api.Assertions.assertArrayEquals(ret, retMulti, 1e-6);
+
+        // Two cameras seeing the same tag: summed cost has the same minimizer.
+        double[] fieldTwice = new double[field2points.getData().length * 2];
+        System.arraycopy(field2points.getData(), 0, fieldTwice, 0, field2points.getData().length);
+        System.arraycopy(
+                field2points.getData(),
+                0,
+                fieldTwice,
+                field2points.getData().length,
+                field2points.getData().length);
+        double[] obsTwice = new double[point_observations.getData().length * 2];
+        System.arraycopy(
+                point_observations.getData(), 0, obsTwice, 0, point_observations.getData().length);
+        System.arraycopy(
+                point_observations.getData(),
+                0,
+                obsTwice,
+                point_observations.getData().length,
+                point_observations.getData().length);
+        double[] r2cTwice = new double[32];
+        System.arraycopy(robot2camera.getData(), 0, r2cTwice, 0, 16);
+        System.arraycopy(robot2camera.getData(), 0, r2cTwice, 16, 16);
+        double[] calTwice = new double[8];
+        System.arraycopy(cameraCal, 0, calTwice, 0, 4);
+        System.arraycopy(cameraCal, 0, calTwice, 4, 4);
+
+        var retTwoCam =
+                ConstrainedSolvepnpJni.do_optimization_multi(
+                        true, new int[] {1, 1}, calTwice, r2cTwice, x_guess, fieldTwice, obsTwice, 0, 0);
+        assertNotNull(retTwoCam);
+        org.junit.jupiter.api.Assertions.assertArrayEquals(ret, retTwoCam, 1e-4);
     }
 }
