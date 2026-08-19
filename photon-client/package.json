@@ -47,5 +47,8 @@
     "typescript": "^5.8.3",
     "vite": "^7.0.5",
     "vite-plugin-vuetify": "^2.1.1"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": ["@parcel/watcher", "core-js", "esbuild"]
   }
 }
