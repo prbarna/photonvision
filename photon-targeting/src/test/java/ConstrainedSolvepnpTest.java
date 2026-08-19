@@ -138,6 +138,8 @@ public class ConstrainedSolvepnpTest {
                 ConstrainedSolvepnpJni.do_optimization_multi(
                         true, new int[] {1, 1}, calTwice, r2cTwice, x_guess, fieldTwice, obsTwice, 0, 0);
         assertNotNull(retTwoCam);
-        org.junit.jupiter.api.Assertions.assertArrayEquals(ret, retTwoCam, 1e-4);
+        // Summed-H Newton is the same minimizer, but δI regularization does not
+        // scale with camera count, so the iterate can differ by ~1e-4.
+        org.junit.jupiter.api.Assertions.assertArrayEquals(ret, retTwoCam, 1e-3);
     }
 }

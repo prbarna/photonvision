@@ -36,6 +36,7 @@ model {
                 if (it.targetPlatform.operatingSystem.macOsX) {
                     it.cCompiler.args << "-Wno-unknown-warning-option"
                     it.cppCompiler.args << "-Wno-unknown-warning-option"
+                    it.cppCompiler.args << "-Wno-character-conversion"
                 }
 
                 if (project.hasProperty('withSanitizers')) {

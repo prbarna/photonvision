@@ -6,7 +6,7 @@ test("Camera Gain Slider won't go past max or min", async ({ page }) => {
   await page.locator("div").filter({ hasText: "Set up some cameras to get started!" }).nth(2).press("Escape");
 
   const gainRow = page.locator("div.d-flex").filter({ has: page.getByText("Camera Gain", { exact: true }) });
-  const gainInput = gainRow.locator('input[type="number"]');
+  const gainInput = gainRow.locator("input[type=number]");
   const increment = gainRow.getByRole("button", { name: /appended action/i });
   const decrement = gainRow.getByRole("button", { name: /prepended action/i });
 

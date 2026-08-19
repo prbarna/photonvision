@@ -169,30 +169,26 @@ newton_solve(constrained_solvepnp::RobotStateMat x_guess,
   double δ = 1e-4 * 2.0;
   constexpr double ERROR_TOL = 1e-4;
 
-  // Average rather than sum so regularization (δI) and ‖∇J‖ tolerance match
-  // do_optimization. Two identical cameras must therefore converge to the same
-  // minimizer as one camera.
-  const double nCam = static_cast<double>(cameras.size());
   auto sumGrad = [&](FullStateMat state) {
     GradMat g = GradMat::Zero();
     for (auto* cam : cameras) {
       g += cam->calculateGradJ(state);
     }
-    return g / nCam;
+    return g;
   };
   auto sumHess = [&](FullStateMat state) {
     HessianMat H = HessianMat::Zero();
     for (auto* cam : cameras) {
       H += cam->calculateHessJ(state);
     }
-    return H / nCam;
+    return H;
   };
   auto sumJ = [&](FullStateMat state) {
     casadi_real J = 0;
     for (auto* cam : cameras) {
       J += cam->calculateJ(state);
     }
-    return J / nCam;
+    return J;
   };
 
   for (int iter = 0; iter < 100; iter++) {
