@@ -39,7 +39,10 @@ if m:
 
 else:
     print("Warning, no valid version found")
-    versionString = gitDescribeResult
+    # git describe --always returns a bare hash when no v* tags exist; setuptools
+    # requires a PEP 440 version.
+    local = re.sub(r"[^0-9A-Za-z.]", "", gitDescribeResult)[:16] or "0"
+    versionString = f"0.0.0.dev0+{local}"
 
 print(f"Building version {versionString}")
 

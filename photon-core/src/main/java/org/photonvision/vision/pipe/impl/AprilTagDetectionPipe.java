@@ -29,7 +29,8 @@ import org.photonvision.vision.opencv.Releasable;
 import org.photonvision.vision.pipe.CVPipe;
 
 public class AprilTagDetectionPipe
-        extends CVPipe<CVMat, List<AprilTagDetection>, AprilTagDetectionPipe.AprilTagDetectionPipeParams>
+        extends CVPipe<
+                CVMat, List<AprilTagDetection>, AprilTagDetectionPipe.AprilTagDetectionPipeParams>
         implements Releasable {
     private AprilTagDetector m_detector = null;
     private long cudaDetector = -1;
@@ -92,13 +93,11 @@ public class AprilTagDetectionPipe
                 this.cudaAccelerated = newParams.useCuda;
             }
             if (cudaAccelerated) {
-                if (newParams.cal == null)
-                    return;
+                if (newParams.cal == null) return;
 
                 final Mat cameraMatrix = newParams.cal.getCameraIntrinsicsMat();
                 final Mat distCoeffs = newParams.cal.getDistCoeffsMat();
-                if (cameraMatrix == null || distCoeffs == null)
-                    return;
+                if (cameraMatrix == null || distCoeffs == null) return;
                 var cx = cameraMatrix.get(0, 2)[0];
                 var cy = cameraMatrix.get(1, 2)[0];
                 var fx = cameraMatrix.get(0, 0)[0];
@@ -138,6 +137,5 @@ public class AprilTagDetectionPipe
             AprilTagDetector.Config detectorParams,
             AprilTagDetector.QuadThresholdParameters quadParams,
             CameraCalibrationCoefficients cal,
-            boolean useCuda) {
-    }
+            boolean useCuda) {}
 }

@@ -31,6 +31,12 @@ model {
             nativeUtils.usePlatformArguments(it)
             if (it.toolChain instanceof GccCompatibleToolChain) {
                 it.cppCompiler.args << "-Wno-deprecated-enum-enum-conversion"
+                // Apple Clang rejects WPILib's -Wno-fixed-enum-extension; don't
+                // fail the host macOS CasADi C compile under -Werror.
+                if (it.targetPlatform.operatingSystem.macOsX) {
+                    it.cCompiler.args << "-Wno-unknown-warning-option"
+                    it.cppCompiler.args << "-Wno-unknown-warning-option"
+                }
 
                 if (project.hasProperty('withSanitizers')) {
                     println("Adding asan/usan/lsan to " + it)

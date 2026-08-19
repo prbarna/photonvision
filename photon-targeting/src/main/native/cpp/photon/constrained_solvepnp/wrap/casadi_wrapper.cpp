@@ -169,26 +169,30 @@ newton_solve(constrained_solvepnp::RobotStateMat x_guess,
   double δ = 1e-4 * 2.0;
   constexpr double ERROR_TOL = 1e-4;
 
+  // Average rather than sum so regularization (δI) and ‖∇J‖ tolerance match
+  // do_optimization. Two identical cameras must therefore converge to the same
+  // minimizer as one camera.
+  const double nCam = static_cast<double>(cameras.size());
   auto sumGrad = [&](FullStateMat state) {
     GradMat g = GradMat::Zero();
     for (auto* cam : cameras) {
       g += cam->calculateGradJ(state);
     }
-    return g;
+    return g / nCam;
   };
   auto sumHess = [&](FullStateMat state) {
     HessianMat H = HessianMat::Zero();
     for (auto* cam : cameras) {
       H += cam->calculateHessJ(state);
     }
-    return H;
+    return H / nCam;
   };
   auto sumJ = [&](FullStateMat state) {
     casadi_real J = 0;
     for (auto* cam : cameras) {
       J += cam->calculateJ(state);
     }
-    return J;
+    return J / nCam;
   };
 
   for (int iter = 0; iter < 100; iter++) {
@@ -498,6 +502,21 @@ constrained_solvepnp::do_optimization_multi(
   if (nCameras <= 0) {
     return wpi::unexpected{
         slp::ExitStatus::NONFINITE_INITIAL_COST_OR_CONSTRAINTS};
+  }
+
+  // One camera must match do_optimization exactly (including its Newton loop).
+  int validCameras = 0;
+  int only = -1;
+  for (int i = 0; i < nCameras; i++) {
+    if (nTags[i] >= 1) {
+      validCameras++;
+      only = i;
+    }
+  }
+  if (validCameras == 1) {
+    return do_optimization(heading_free, nTags[only], cameraCals[only],
+                           robot2cameras[only], x_guess, field2points[only],
+                           point_observations[only], gyroθ, gyroErrorScaleFac);
   }
 
   std::vector<ProblemState<3>> states;

@@ -119,8 +119,7 @@ const resetTempSettingsStruct = () => {
     pitch: rtc.pitch * RAD2DEG,
     yaw: rtc.yaw * RAD2DEG
   };
-  tempSettingsStruct.value.includeInFusion =
-    useCameraSettingsStore().currentCameraSettings.includeInFusion !== false;
+  tempSettingsStruct.value.includeInFusion = useCameraSettingsStore().currentCameraSettings.includeInFusion !== false;
 };
 
 const saveCameraSettings = () => {
@@ -233,24 +232,14 @@ const wrappedCameras = computed<SelectItem[]>(() =>
       <pv-number-input v-model="tempSettingsStruct.robotToCamera.x" label="X (m)" :step="0.001" :label-cols="4" />
       <pv-number-input v-model="tempSettingsStruct.robotToCamera.y" label="Y (m)" :step="0.001" :label-cols="4" />
       <pv-number-input v-model="tempSettingsStruct.robotToCamera.z" label="Z (m)" :step="0.001" :label-cols="4" />
-      <pv-number-input
-        v-model="tempSettingsStruct.robotToCamera.roll"
-        label="Roll (deg)"
-        :step="0.1"
-        :label-cols="4"
-      />
+      <pv-number-input v-model="tempSettingsStruct.robotToCamera.roll" label="Roll (deg)" :step="0.1" :label-cols="4" />
       <pv-number-input
         v-model="tempSettingsStruct.robotToCamera.pitch"
         label="Pitch (deg)"
         :step="0.1"
         :label-cols="4"
       />
-      <pv-number-input
-        v-model="tempSettingsStruct.robotToCamera.yaw"
-        label="Yaw (deg)"
-        :step="0.1"
-        :label-cols="4"
-      />
+      <pv-number-input v-model="tempSettingsStruct.robotToCamera.yaw" label="Yaw (deg)" :step="0.1" :label-cols="4" />
       <pv-switch
         v-model="tempSettingsStruct.includeInFusion"
         tooltip="Include this camera in multi-camera pose comparison streams"
